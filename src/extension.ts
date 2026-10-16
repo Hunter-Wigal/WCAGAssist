@@ -15,10 +15,10 @@ export function activate(context: vscode.ExtensionContext) {
 	// Now provide the implementation of the command with registerCommand
 	// The commandId parameter must match the command field in package.json
 
-	const disposable = vscode.commands.registerCommand('wcagassist.removeTables', ()=>{
+	const disposable = vscode.commands.registerCommand('wcagassist.removeTables', () => {
 		const editor = vscode.window.activeTextEditor;
 
-		if (editor){
+		if (editor) {
 			const document = editor.document;
 			const docText = document.getText();
 
@@ -33,7 +33,7 @@ export function activate(context: vscode.ExtensionContext) {
 				editBuilder.replace(entireRange, newText);
 			});
 		}
-		else{
+		else {
 			vscode.window.showErrorMessage("No open text editor!");
 		}
 	});
@@ -42,40 +42,34 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 
-
-let tableStartRe = /(<table\s*([a-zA-Z0-9_-]*(="[^?]*?"\s*)*)*>)/g;
-let tableEndRe = /(<\/table>)/g;
+// Both start and end of table tag
+let tableRe = /(<table\s*([a-zA-Z0-9_-]*(="[^?]*?"\s*)*)*>)|(<\/table>)/g;
+let theadRe = /(<thead\s*([a-zA-Z0-9_-]*(="[^?]*?"\s*)*)*>)|(<\/thead>)/g;
+let tbodyRe = /(<tbody\s*([a-zA-Z0-9_-]*(="[^?]*?"\s*)*)*>)|(<\/tbody>)/g;
+let tdRe =/(<td\s*([a-zA-Z0-9_-]*(="[^?]*?"\s*)*)*>)|(<\/td>)/g;
+let thRe = /(<th\s*([a-zA-Z0-9_-]*(="[^?]*?"\s*)*)*>)|(<\/th>)/g;
+let trRe = /(<tr\s*([a-zA-Z0-9_-]*(="[^?]*?"\s*)*)*>)|(<\/tr>)/g;
 
 // TODO change to remove all or remove selection. I guess do that above
-function removeTable(fileData: string): string{
+function removeTable(fileData: string): string {
 	let newFileData = fileData;
 
 	let lines = newFileData.split("\n");
 	let newLines = [];
 
-	for(let line of lines){
-		let match = line.match(tableStartRe);
-		let matched = false;
+	for (let line of lines) {
+		let newLine = removeMatch(line, tableRe);
+		newLine = removeMatch(newLine, theadRe);
+		newLine = removeMatch(newLine, tbodyRe);
+		newLine = removeMatch(newLine, trRe);
+		newLine = removeMatch(newLine, tdRe);
+		newLine = removeMatch(newLine, thRe);
 
-		if(match){
-			line = line.replaceAll(tableStartRe, "");
-			matched = true;
-		}
-		match = line.match(tableEndRe);
-		if(match){
-			line = line.replaceAll(tableEndRe, "");
-			matched = true;
-		}
+		// Other matching above
 
-		if(!matched){
-			// No changes made to line
-			newLines.push(line);
-		}
-
-		if(matched && line.trim().length > 0){
-			// Changes made and line is not empty
-			console.log(line.trim());
-			newLines.push(line);
+		if(newLine !== null){
+			// Null means empty, not needed line
+			newLines.push(newLine);
 		}
 	}
 	// console.log(lines);
@@ -83,4 +77,31 @@ function removeTable(fileData: string): string{
 
 
 	return newFileData;
+}
+
+function removeMatch(line: string | null, pattern: RegExp) : string | null {
+	if(line === null){
+		return null;
+	}
+
+	let match = line.search(pattern);
+	let matched = false;
+
+	if (match > 0) {
+		line = line.replaceAll(pattern, "");
+		matched = true;
+	}
+
+	if (!matched) {
+		// No changes made to line
+		return line;
+	}
+
+	if (matched && line.trim().length > 0) {
+		// Changes made and line is not empty
+		console.log(line.trim());
+		return line;
+	}
+
+	return null;
 }
